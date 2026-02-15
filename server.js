@@ -5,21 +5,22 @@ const path = require('path');
 const mongoose = require('mongoose');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// Porta dinâmica para o Render/Railway
+const PORT = process.env.PORT || 3000; 
 
-// Sua string de conexão configurada
+// A sua string de conexão do MongoDB Atlas
 const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912@@cluster0.hjbuhjv.mongodb.net/?appName=Cluster0";
 
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname))); // Serve os arquivos do Dashboard
 
-// Conexão com o banco de dados
+// Conexão com o MongoDB Atlas
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
-// Definição do modelo de dados
+// Esquema de dados para as suas transações
 const TransacaoSchema = new mongoose.Schema({
     descricao: String,
     valor: Number,
@@ -29,16 +30,17 @@ const TransacaoSchema = new mongoose.Schema({
 
 const Transacao = mongoose.model('Transacao', TransacaoSchema);
 
-// Rotas da API adaptadas para MongoDB
+// Listar transações (GET)
 app.get('/api/transacoes', async (req, res) => {
     try {
         const transacoes = await Transacao.find();
         res.json(transacoes);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao buscar dados" });
+        res.status(500).json({ error: "Erro ao buscar dados no banco" });
     }
 });
 
+// Criar nova transação (POST)
 app.post('/api/transacoes', async (req, res) => {
     try {
         const novaTransacao = new Transacao({
@@ -47,16 +49,18 @@ app.post('/api/transacoes', async (req, res) => {
             tipo: req.body.tipo,
             data: req.body.dataManual
         });
+
         await novaTransacao.save();
         res.status(201).json(novaTransacao);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao salvar dados" });
+        res.status(500).json({ error: "Erro ao salvar no banco" });
     }
 });
 
+// Atualizar transação (PUT)
 app.put('/api/transacoes/:id', async (req, res) => {
     try {
-        const atualizada = await Transacao.findByIdAndUpdate(
+        const transacaoAtualizada = await Transacao.findByIdAndUpdate(
             req.params.id,
             {
                 descricao: req.body.descricao,
@@ -66,25 +70,27 @@ app.put('/api/transacoes/:id', async (req, res) => {
             },
             { new: true }
         );
-        res.json(atualizada);
+        res.json(transacaoAtualizada);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao atualizar" });
+        res.status(500).json({ error: "Erro ao atualizar no banco" });
     }
 });
 
+// Eliminar transação (DELETE)
 app.delete('/api/transacoes/:id', async (req, res) => {
     try {
         await Transacao.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: "Erro ao excluir" });
+        res.status(500).json({ error: "Erro ao excluir do banco" });
     }
 });
 
-app.get('*', (req, res) => {
+// Rota corrigida para compatibilidade com Node 22 e path-to-regexp recente
+app.get('(.*)', (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));
 });
 
 app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Servidor online na porta ${PORT}`);
 });
