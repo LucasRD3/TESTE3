@@ -86,8 +86,9 @@ app.delete('/api/transacoes/:id', async (req, res) => {
     }
 });
 
-// Rota corrigida com parâmetro nomeado para compatibilidade com Node 22 e path-to-regexp recente
-app.get('/:any*', (req, res) => {
+// Rota de fallback corrigida usando Expressão Regular nativa
+// Isso captura qualquer rota que não tenha sido tratada acima e envia o Index.html
+app.get(/^(?!\/api).+/, (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));
 });
 
