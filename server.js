@@ -18,7 +18,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
-// Esquemas
+// Esquema Base
 const TransacaoSchema = new mongoose.Schema({
     descricao: String,
     valor: Number,
@@ -31,8 +31,15 @@ const UserSchema = new mongoose.Schema({
     senha: { type: String, required: true }
 });
 
-const Transacao = mongoose.model('Transacao', TransacaoSchema);
 const User = mongoose.model('User', UserSchema);
+
+// Função auxiliar para obter a "pasta" (coleção) baseada na data
+const getModelPorData = (dataISO) => {
+    // dataISO esperado: "YYYY-MM-DD"
+    const partes = dataISO.split('-');
+    const nomeColecao = `transacoes_${partes[1]}_${partes[0]}`;
+    return mongoose.model('Transacao', TransacaoSchema, nomeColecao);
+};
 
 // Middleware para verificar Token
 const verificarToken = (req, res, next) => {
@@ -111,19 +118,26 @@ app.delete('/api/usuarios/:id', verificarToken, async (req, res) => {
     }
 });
 
-// Rotas de Transações
+// Rotas de Transações Organizadas por "Pastas" (Coleções de Mês/Ano)
 app.get('/api/transacoes', verificarToken, async (req, res) => {
     try {
-        const transacoes = await Transacao.find();
+        const { mes, ano } = req.query;
+        if (!mes || !ano) return res.status(400).json({ error: "Informe mês e ano" });
+        
+        const nomeColecao = `transacoes_${mes.padStart(2, '0')}_${ano}`;
+        const ModelDinamico = mongoose.model('Transacao', TransacaoSchema, nomeColecao);
+        
+        const transacoes = await ModelDinamico.find();
         res.json(transacoes);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao buscar dados" });
+        res.status(500).json({ error: "Erro ao buscar dados desta pasta" });
     }
 });
 
 app.post('/api/transacoes', verificarToken, async (req, res) => {
     try {
-        const novaTransacao = new Transacao({
+        const ModelDinamico = getModelPorData(req.body.dataManual);
+        const novaTransacao = new ModelDinamico({
             descricao: req.body.descricao,
             valor: parseFloat(req.body.valor),
             tipo: req.body.tipo,
@@ -132,13 +146,15 @@ app.post('/api/transacoes', verificarToken, async (req, res) => {
         await novaTransacao.save();
         res.status(201).json(novaTransacao);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao salvar" });
+        res.status(500).json({ error: "Erro ao salvar na pasta correspondente" });
     }
 });
 
 app.put('/api/transacoes/:id', verificarToken, async (req, res) => {
     try {
-        const transacaoAtualizada = await Transacao.findByIdAndUpdate(
+        // Nota: Para atualizar em coleções dinâmicas, o ID deve ser buscado na pasta correta
+        const ModelDinamico = getModelPorData(req.body.dataManual);
+        const transacaoAtualizada = await ModelDinamico.findByIdAndUpdate(
             req.params.id,
             {
                 descricao: req.body.descricao,
@@ -156,7 +172,9 @@ app.put('/api/transacoes/:id', verificarToken, async (req, res) => {
 
 app.delete('/api/transacoes/:id', verificarToken, async (req, res) => {
     try {
-        await Transacao.findByIdAndDelete(req.params.id);
+        const { data } = req.query; // Precisa passar a data na URL para saber em qual "pasta" deletar
+        const ModelDinamico = getModelPorData(data);
+        await ModelDinamico.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Erro ao excluir" });
