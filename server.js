@@ -14,6 +14,8 @@ const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912%40@cluster0.hjbuhjv.mongodb.
 app.use(cors());
 app.use(bodyParser.json());
 
+// Removida a linha de express.static que causava o erro ao procurar arquivos inexistentes
+
 // Conexão com o MongoDB Atlas
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
@@ -86,6 +88,8 @@ app.delete('/api/transacoes/:id', async (req, res) => {
         res.status(500).json({ error: "Erro ao excluir do banco" });
     }
 });
+
+// REMOVIDA a rota app.get('*') ou RegExp que tentava enviar o Index.html
 
 app.listen(PORT, () => {
     console.log(`Servidor API online na porta ${PORT}`);
