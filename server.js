@@ -86,8 +86,8 @@ app.delete('/api/transacoes/:id', async (req, res) => {
     }
 });
 
-// Rota corrigida para compatibilidade com Node 22 e path-to-regexp recente
-app.get('(.*)', (req, res) => {
+// Rota corrigida com parâmetro nomeado para compatibilidade com Node 22 e path-to-regexp recente
+app.get('/:any*', (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));
 });
 
