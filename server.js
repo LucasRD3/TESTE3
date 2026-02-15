@@ -68,23 +68,21 @@ app.post('/api/login', async (req, res) => {
     res.status(401).json({ error: "Usuário ou senha inválidos" });
 });
 
-// Listar Usuários
+// Gestão de Usuários
 app.get('/api/usuarios', verificarToken, async (req, res) => {
     try {
-        const usuarios = await User.find({}, 'usuario'); // Retorna apenas o nome do usuário
+        const usuarios = await User.find({}, 'usuario');
         res.json(usuarios);
     } catch (err) {
         res.status(500).json({ error: "Erro ao buscar usuários" });
     }
 });
 
-// Cadastrar Usuário
 app.post('/api/usuarios', verificarToken, async (req, res) => {
     try {
         const { usuario, senha } = req.body;
         const salt = await bcrypt.genSalt(10);
         const hashedSenha = await bcrypt.hash(senha, salt);
-
         const novoUsuario = new User({ usuario, senha: hashedSenha });
         await novoUsuario.save();
         res.status(201).json({ message: "Usuário criado" });
@@ -93,7 +91,6 @@ app.post('/api/usuarios', verificarToken, async (req, res) => {
     }
 });
 
-// Alterar Senha
 app.put('/api/usuarios/:id', verificarToken, async (req, res) => {
     try {
         const salt = await bcrypt.genSalt(10);
@@ -102,6 +99,15 @@ app.put('/api/usuarios/:id', verificarToken, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: "Erro ao atualizar senha" });
+    }
+});
+
+app.delete('/api/usuarios/:id', verificarToken, async (req, res) => {
+    try {
+        await User.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao excluir usuário" });
     }
 });
 
