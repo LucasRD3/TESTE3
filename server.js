@@ -46,17 +46,15 @@ const verificarToken = (req, res, next) => {
     });
 };
 
-// Rota de Login (Suporta Usuário Fixo e Usuários do Banco)
+// Rota de Login
 app.post('/api/login', async (req, res) => {
     const { usuario, senha } = req.body;
 
-    // 1. Tenta usuário fixo mestre
     if (usuario === "IADEV" && senha === "1234") {
         const token = jwt.sign({ id: usuario }, SECRET_KEY, { expiresIn: '24h' });
         return res.json({ auth: true, token });
     }
 
-    // 2. Tenta buscar no banco de dados
     try {
         const user = await User.findOne({ usuario });
         if (user && await bcrypt.compare(senha, user.senha)) {
@@ -70,38 +68,50 @@ app.post('/api/login', async (req, res) => {
     res.status(401).json({ error: "Usuário ou senha inválidos" });
 });
 
-// Cadastro de novos usuários (Protegido)
-app.post('/api/usuarios', verificarToken, async (req, res) => {
+// Listar Usuários
+app.get('/api/usuarios', verificarToken, async (req, res) => {
     try {
-        const { usuario, senha } = req.body;
-        
-        // Verifica se usuário já existe
-        const userExists = await User.findOne({ usuario });
-        if (userExists) return res.status(400).json({ error: "Usuário já cadastrado" });
-
-        // Criptografa a senha
-        const salt = await bcrypt.genSalt(10);
-        const hashedSenha = await bcrypt.hash(senha, salt);
-
-        const novoUsuario = new User({
-            usuario,
-            senha: hashedSenha
-        });
-
-        await novoUsuario.save();
-        res.status(201).json({ message: "Usuário criado com sucesso" });
+        const usuarios = await User.find({}, 'usuario'); // Retorna apenas o nome do usuário
+        res.json(usuarios);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao salvar usuário" });
+        res.status(500).json({ error: "Erro ao buscar usuários" });
     }
 });
 
-// Rotas Protegidas de Transações
+// Cadastrar Usuário
+app.post('/api/usuarios', verificarToken, async (req, res) => {
+    try {
+        const { usuario, senha } = req.body;
+        const salt = await bcrypt.genSalt(10);
+        const hashedSenha = await bcrypt.hash(senha, salt);
+
+        const novoUsuario = new User({ usuario, senha: hashedSenha });
+        await novoUsuario.save();
+        res.status(201).json({ message: "Usuário criado" });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao salvar" });
+    }
+});
+
+// Alterar Senha
+app.put('/api/usuarios/:id', verificarToken, async (req, res) => {
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedSenha = await bcrypt.hash(req.body.novaSenha, salt);
+        await User.findByIdAndUpdate(req.params.id, { senha: hashedSenha });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao atualizar senha" });
+    }
+});
+
+// Rotas de Transações
 app.get('/api/transacoes', verificarToken, async (req, res) => {
     try {
         const transacoes = await Transacao.find();
         res.json(transacoes);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao buscar dados no banco" });
+        res.status(500).json({ error: "Erro ao buscar dados" });
     }
 });
 
@@ -113,11 +123,10 @@ app.post('/api/transacoes', verificarToken, async (req, res) => {
             tipo: req.body.tipo,
             data: req.body.dataManual
         });
-
         await novaTransacao.save();
         res.status(201).json(novaTransacao);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao salvar no banco" });
+        res.status(500).json({ error: "Erro ao salvar" });
     }
 });
 
@@ -135,7 +144,7 @@ app.put('/api/transacoes/:id', verificarToken, async (req, res) => {
         );
         res.json(transacaoAtualizada);
     } catch (err) {
-        res.status(500).json({ error: "Erro ao atualizar no banco" });
+        res.status(500).json({ error: "Erro ao atualizar" });
     }
 });
 
@@ -144,7 +153,7 @@ app.delete('/api/transacoes/:id', verificarToken, async (req, res) => {
         await Transacao.findByIdAndDelete(req.params.id);
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: "Erro ao excluir do banco" });
+        res.status(500).json({ error: "Erro ao excluir" });
     }
 });
 
