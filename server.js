@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
-const SECRET_KEY = "sua_chave_secreta_aqui"; // Em produção, use variáveis de ambiente
+const SECRET_KEY = "sua_chave_secreta_aqui"; 
 
 const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912%40@cluster0.hjbuhjv.mongodb.net/?appName=Cluster0";
 
@@ -46,21 +46,56 @@ const verificarToken = (req, res, next) => {
     });
 };
 
-// Rota de Login
+// Rota de Login (Suporta Usuário Fixo e Usuários do Banco)
 app.post('/api/login', async (req, res) => {
     const { usuario, senha } = req.body;
 
-    // Usuário fixo solicitado: IADEV / 1234
-    // Em um sistema real, você buscaria no banco: await User.findOne({ usuario });
+    // 1. Tenta usuário fixo mestre
     if (usuario === "IADEV" && senha === "1234") {
         const token = jwt.sign({ id: usuario }, SECRET_KEY, { expiresIn: '24h' });
         return res.json({ auth: true, token });
     }
 
+    // 2. Tenta buscar no banco de dados
+    try {
+        const user = await User.findOne({ usuario });
+        if (user && await bcrypt.compare(senha, user.senha)) {
+            const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '24h' });
+            return res.json({ auth: true, token });
+        }
+    } catch (err) {
+        return res.status(500).json({ error: "Erro no servidor" });
+    }
+
     res.status(401).json({ error: "Usuário ou senha inválidos" });
 });
 
-// Rotas Protegidas
+// Cadastro de novos usuários (Protegido)
+app.post('/api/usuarios', verificarToken, async (req, res) => {
+    try {
+        const { usuario, senha } = req.body;
+        
+        // Verifica se usuário já existe
+        const userExists = await User.findOne({ usuario });
+        if (userExists) return res.status(400).json({ error: "Usuário já cadastrado" });
+
+        // Criptografa a senha
+        const salt = await bcrypt.genSalt(10);
+        const hashedSenha = await bcrypt.hash(senha, salt);
+
+        const novoUsuario = new User({
+            usuario,
+            senha: hashedSenha
+        });
+
+        await novoUsuario.save();
+        res.status(201).json({ message: "Usuário criado com sucesso" });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao salvar usuário" });
+    }
+});
+
+// Rotas Protegidas de Transações
 app.get('/api/transacoes', verificarToken, async (req, res) => {
     try {
         const transacoes = await Transacao.find();
