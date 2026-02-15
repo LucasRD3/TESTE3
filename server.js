@@ -4,24 +4,17 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 
 const app = express();
-// Porta dinâmica para o Render
 const PORT = process.env.PORT || 3000; 
 
-// String de conexão com URL Encoding para o caractere @
 const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912%40@cluster0.hjbuhjv.mongodb.net/?appName=Cluster0";
 
-// Configuração de CORS: Essencial para permitir que o seu Index.html local aceda a este servidor
 app.use(cors());
 app.use(bodyParser.json());
 
-// Removida a linha de express.static que causava o erro ao procurar arquivos inexistentes
-
-// Conexão com o MongoDB Atlas
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
-// Esquema de dados
 const TransacaoSchema = new mongoose.Schema({
     descricao: String,
     valor: Number,
@@ -31,9 +24,6 @@ const TransacaoSchema = new mongoose.Schema({
 
 const Transacao = mongoose.model('Transacao', TransacaoSchema);
 
-// --- ROTAS DA API ---
-
-// Listar transações
 app.get('/api/transacoes', async (req, res) => {
     try {
         const transacoes = await Transacao.find();
@@ -43,14 +33,13 @@ app.get('/api/transacoes', async (req, res) => {
     }
 });
 
-// Criar transação
 app.post('/api/transacoes', async (req, res) => {
     try {
         const novaTransacao = new Transacao({
             descricao: req.body.descricao,
             valor: parseFloat(req.body.valor),
             tipo: req.body.tipo,
-            data: req.body.dataManual
+            data: req.body.dataManual // Usa a data enviada pelo formulário
         });
 
         await novaTransacao.save();
@@ -60,7 +49,6 @@ app.post('/api/transacoes', async (req, res) => {
     }
 });
 
-// Atualizar transação
 app.put('/api/transacoes/:id', async (req, res) => {
     try {
         const transacaoAtualizada = await Transacao.findByIdAndUpdate(
@@ -69,7 +57,7 @@ app.put('/api/transacoes/:id', async (req, res) => {
                 descricao: req.body.descricao,
                 valor: parseFloat(req.body.valor),
                 tipo: req.body.tipo,
-                data: req.body.dataManual
+                data: req.body.dataManual // Atualiza com a data enviada
             },
             { new: true }
         );
@@ -79,7 +67,6 @@ app.put('/api/transacoes/:id', async (req, res) => {
     }
 });
 
-// Eliminar transação
 app.delete('/api/transacoes/:id', async (req, res) => {
     try {
         await Transacao.findByIdAndDelete(req.params.id);
@@ -88,8 +75,6 @@ app.delete('/api/transacoes/:id', async (req, res) => {
         res.status(500).json({ error: "Erro ao excluir do banco" });
     }
 });
-
-// REMOVIDA a rota app.get('*') ou RegExp que tentava enviar o Index.html
 
 app.listen(PORT, () => {
     console.log(`Servidor API online na porta ${PORT}`);
