@@ -8,8 +8,8 @@ const app = express();
 // Porta dinâmica para o Render/Railway
 const PORT = process.env.PORT || 3000; 
 
-// A sua string de conexão do MongoDB Atlas
-const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912@@cluster0.hjbuhjv.mongodb.net/?appName=Cluster0";
+// A senha original "Lc9711912@" foi alterada para "Lc9711912%40" para evitar erros de leitura
+const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912%40@cluster0.hjbuhjv.mongodb.net/?appName=Cluster0";
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -86,8 +86,7 @@ app.delete('/api/transacoes/:id', async (req, res) => {
     }
 });
 
-// Rota de fallback corrigida usando Expressão Regular nativa
-// Isso captura qualquer rota que não tenha sido tratada acima e envia o Index.html
+// Rota de fallback corrigida usando Expressão Regular nativa para Node 22
 app.get(/^(?!\/api).+/, (req, res) => {
     res.sendFile(path.join(__dirname, 'Index.html'));
 });
