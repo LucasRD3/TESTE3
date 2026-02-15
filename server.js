@@ -1,26 +1,25 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const path = require('path');
 const mongoose = require('mongoose');
 
 const app = express();
-// Porta dinâmica para o Render/Railway
+// Porta dinâmica para o Render
 const PORT = process.env.PORT || 3000; 
 
-// A senha original "Lc9711912@" foi alterada para "Lc9711912%40" para evitar erros de leitura
+// String de conexão com URL Encoding para o caractere @
 const MONGO_URI = "mongodb+srv://LucasRD3:Lc9711912%40@cluster0.hjbuhjv.mongodb.net/?appName=Cluster0";
 
+// Configuração de CORS: Essencial para permitir que o seu Index.html local aceda a este servidor
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname))); // Serve os arquivos do Dashboard
 
 // Conexão com o MongoDB Atlas
 mongoose.connect(MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB Atlas com sucesso!"))
     .catch(err => console.error("Erro ao conectar ao MongoDB:", err));
 
-// Esquema de dados para as suas transações
+// Esquema de dados
 const TransacaoSchema = new mongoose.Schema({
     descricao: String,
     valor: Number,
@@ -30,7 +29,9 @@ const TransacaoSchema = new mongoose.Schema({
 
 const Transacao = mongoose.model('Transacao', TransacaoSchema);
 
-// Listar transações (GET)
+// --- ROTAS DA API ---
+
+// Listar transações
 app.get('/api/transacoes', async (req, res) => {
     try {
         const transacoes = await Transacao.find();
@@ -40,7 +41,7 @@ app.get('/api/transacoes', async (req, res) => {
     }
 });
 
-// Criar nova transação (POST)
+// Criar transação
 app.post('/api/transacoes', async (req, res) => {
     try {
         const novaTransacao = new Transacao({
@@ -57,7 +58,7 @@ app.post('/api/transacoes', async (req, res) => {
     }
 });
 
-// Atualizar transação (PUT)
+// Atualizar transação
 app.put('/api/transacoes/:id', async (req, res) => {
     try {
         const transacaoAtualizada = await Transacao.findByIdAndUpdate(
@@ -76,7 +77,7 @@ app.put('/api/transacoes/:id', async (req, res) => {
     }
 });
 
-// Eliminar transação (DELETE)
+// Eliminar transação
 app.delete('/api/transacoes/:id', async (req, res) => {
     try {
         await Transacao.findByIdAndDelete(req.params.id);
@@ -86,11 +87,6 @@ app.delete('/api/transacoes/:id', async (req, res) => {
     }
 });
 
-// Rota de fallback corrigida usando Expressão Regular nativa para Node 22
-app.get(/^(?!\/api).+/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'Index.html'));
-});
-
 app.listen(PORT, () => {
-    console.log(`Servidor online na porta ${PORT}`);
+    console.log(`Servidor API online na porta ${PORT}`);
 });
